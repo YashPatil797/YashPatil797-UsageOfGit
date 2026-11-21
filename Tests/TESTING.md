@@ -77,8 +77,8 @@ Repeat the creation request with the same alias. Expected: `409 Conflict`.
 
 ```bash
 curl -s -o /dev/null localhost:8081/my-sale
-docker compose exec redis redis-cli GET url:my-sale
-docker compose exec redis redis-cli TTL url:my-sale
+docker compose exec redis redis-cli GET url:v2:my-sale
+docker compose exec redis redis-cli TTL url:v2:my-sale
 
 docker compose stop redis
 curl -i localhost:8081/my-sale
@@ -93,13 +93,38 @@ The redirect should still return `302 Found` while Redis is unavailable.
 docker compose exec postgres psql -U shortener -d shortener \
   -c "UPDATE urls SET expires_at=now()-interval '1 minute' WHERE code='my-sale';"
 
-docker compose exec redis redis-cli DEL url:my-sale
+docker compose exec redis redis-cli DEL url:v2:my-sale
 curl -i localhost:8081/my-sale
 ```
 
 Expected: `410 Gone`.
 
-## 8. Automated checks
+## 8. Metadata, permanent redirect, and deactivation
+
+```bash
+RESPONSE=$(curl -s -X POST localhost:8081/api/v1/urls \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com/moved","alias":"moved-page","redirectType":"permanent"}')
+TOKEN=$(echo "$RESPONSE" | sed -E 's/.*"managementToken":"([^"]+)".*/\1/')
+
+curl -i localhost:8082/moved-page
+curl -s localhost:8081/api/v1/urls/moved-page
+```
+
+Expected: `301 Moved Permanently`, then metadata with `"hitCount":1` and `"redirectType":"permanent"` and no token.
+
+```bash
+curl -i -X PATCH localhost:8081/api/v1/urls/moved-page -H 'Content-Type: application/json' -d '{"active":false}'
+curl -i -X PATCH localhost:8081/api/v1/urls/moved-page -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wrong' -d '{"active":false}'
+curl -i -X PATCH localhost:8081/api/v1/urls/moved-page -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" -d '{"active":false}'
+curl -i localhost:8082/moved-page
+```
+
+Expected: `401`, `403`, `200` with `"active":false`, then `410 Gone` with `"error":"inactive"`.
+
+## 9. Automated checks
 
 ```bash
 ./mvnw -q compile

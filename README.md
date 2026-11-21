@@ -52,7 +52,9 @@ Both stateless Spring Boot instances use the same PostgreSQL database and Redis 
 | Decision | Choice | Trade-off |
 |---|---|---|
 | ID generation | PostgreSQL sequence followed by Base62 encoding | Simple and collision-free for generated codes, but exposes approximate creation order |
-| Redirect status | `302 Found` | Preserves future control over expiry and analytics; less cacheable than `301` |
+| Redirect status | `302 Found` by default; `301` only when the creator sets `redirectType: "permanent"` | `302` keeps hit counting and deactivation effective; a cached `301` can bypass both for clients that already cached it |
+| Ownership | One-time 256-bit management token returned at creation; only its SHA-256 hash is stored | No user accounts needed; a lost token cannot be recovered or reissued |
+| Deactivation | Sets `active = false` and keeps the row | The alias stays reserved and metadata and hit count are preserved; inactive links return `410` |
 | Caching | Redis cache-aside with a maximum 24-hour TTL | Fast redirects while PostgreSQL remains authoritative |
 | Redis failure | Log a warning and read from PostgreSQL | Redirects remain available, with temporarily higher database load |
 | Custom aliases | Database uniqueness constraint | Strong cross-instance consistency; duplicate aliases return `409` |
@@ -76,19 +78,29 @@ Example `201 Created` response:
 {
   "code": "1000",
   "shortUrl": "http://localhost:8081/1000",
-  "expiresAt": null
+  "originalUrl": "https://example.com/a/very/long/path",
+  "createdAt": "2026-11-21T08:30:00.123456Z",
+  "expiresAt": null,
+  "hitCount": 0,
+  "active": true,
+  "redirectType": "temporary",
+  "managementToken": "Zq3k...43 URL-safe characters..."
 }
 ```
 
-### Create a custom alias with expiry
+`managementToken` is returned only once. Store it to deactivate the link later; it never appears in metadata, short URLs, or logs.
+
+### Create a custom alias with expiry and a permanent redirect
 
 ```bash
 curl -i -X POST http://localhost:8081/api/v1/urls \
   -H 'Content-Type: application/json' \
-  -d '{"url":"https://example.com","alias":"my-sale","expiresInDays":30}'
+  -d '{"url":"https://example.com","alias":"my-sale","expiresInDays":30,"redirectType":"permanent"}'
 ```
 
-Alias rules: 4–30 characters using letters, numbers, `_`, or `-`.
+Alias rules: 4–30 characters using letters, numbers, `_`, or `-`; `api`, `actuator`, and `health` are reserved.
+
+`redirectType` is optional: `temporary` (default, `302`) or `permanent` (`301`). Use `permanent` only for links that will never be deactivated, because browsers may cache a `301` and skip the service.
 
 ### Follow a short URL
 
@@ -96,16 +108,37 @@ Alias rules: 4–30 characters using letters, numbers, `_`, or `-`.
 curl -i http://localhost:8082/my-sale
 ```
 
-Expected: `302 Found` with the original URL in the `Location` header.
+Expected: `302 Found` (or `301 Moved Permanently` for permanent links) with the original URL in the `Location` header. Each successful redirect increments `hitCount` once.
+
+### Read metadata
+
+```bash
+curl -s http://localhost:8081/api/v1/urls/my-sale
+```
+
+Returns `code`, `shortUrl`, `originalUrl`, `createdAt` (UTC, ISO-8601), `expiresAt`, `hitCount`, `active`, and `redirectType`. Reading metadata does not change `hitCount`.
+
+### Deactivate a link (owner only)
+
+```bash
+curl -i -X PATCH http://localhost:8081/api/v1/urls/my-sale \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $MANAGEMENT_TOKEN" \
+  -d '{"active":false}'
+```
+
+Returns `200 OK` with the updated metadata. The link then returns `410 Gone`, keeps its metadata and hit count, and its alias cannot be reused. Repeating the request returns the same inactive state. Reactivation is not supported. Links created before management tokens existed have no owner and cannot be deactivated through the API.
 
 ### Error responses
 
 | Condition | Status |
 |---|---:|
-| Invalid URL, alias, or expiry | `400` |
+| Invalid URL, alias, expiry, redirect type, or update body | `400` |
+| Missing or malformed `Authorization: Bearer` header | `401` |
+| Management token does not own the link | `403` |
 | Unknown code | `404` |
-| Duplicate alias | `409` |
-| Expired link | `410` |
+| Duplicate alias, including an inactive link's alias | `409` |
+| Expired link (`expired`) or deactivated link (`inactive`) | `410` |
 | Unexpected server error | `500` |
 
 Errors use:

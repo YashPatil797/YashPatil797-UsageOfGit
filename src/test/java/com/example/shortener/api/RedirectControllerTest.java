@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.shortener.domain.RedirectType;
+import com.example.shortener.service.ResolvedUrl;
 import com.example.shortener.service.UrlService;
 
 @WebMvcTest(RedirectController.class)
@@ -31,13 +34,22 @@ class RedirectControllerTest {
 	@ParameterizedTest
 	@ValueSource(strings = { "apiv2", "actuator1", "healthy", "1000" })
 	void redirectsCodesThatOnlyStartWithReservedWords(String code) throws Exception {
-		when(urlService.resolve(code)).thenReturn("https://example.com/" + code);
+		when(urlService.resolve(code)).thenReturn(new ResolvedUrl("https://example.com/" + code, RedirectType.TEMPORARY));
 
 		mockMvc.perform(get("/" + code))
 			.andExpect(status().isFound())
 			.andExpect(header().string("Location", "https://example.com/" + code));
 
 		verify(urlService).resolve(code);
+	}
+
+	@Test
+	void permanentLinkRedirectsWith301() throws Exception {
+		when(urlService.resolve("moved")).thenReturn(new ResolvedUrl("https://example.com/new", RedirectType.PERMANENT));
+
+		mockMvc.perform(get("/moved"))
+			.andExpect(status().isMovedPermanently())
+			.andExpect(header().string("Location", "https://example.com/new"));
 	}
 
 	@ParameterizedTest

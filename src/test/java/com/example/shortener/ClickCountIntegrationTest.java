@@ -76,7 +76,7 @@ class ClickCountIntegrationTest {
 	void concurrentCachedRedirectsAreEachCountedOnce() throws Exception {
 		jdbc.update("INSERT INTO urls (id, code, long_url) VALUES (1, 'popular', 'https://example.com')");
 		assertEquals(302, get("/popular"));
-		assertTrue(redisTemplate.hasKey("url:popular"), "First redirect should populate the cache");
+		assertTrue(redisTemplate.hasKey("url:v2:popular"), "First redirect should populate the cache");
 
 		ExecutorService executor = Executors.newFixedThreadPool(REDIRECT_COUNT);
 		CountDownLatch ready = new CountDownLatch(REDIRECT_COUNT);

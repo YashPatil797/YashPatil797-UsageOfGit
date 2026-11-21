@@ -2,6 +2,7 @@ package com.example.shortener.api;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -13,7 +14,10 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.shortener.service.AliasTakenException;
 import com.example.shortener.service.ExpiredException;
+import com.example.shortener.service.ForbiddenException;
+import com.example.shortener.service.InactiveException;
 import com.example.shortener.service.NotFoundException;
+import com.example.shortener.service.UnauthorizedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -54,6 +58,25 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handleExpired(ExpiredException exception) {
 		return ResponseEntity.status(HttpStatus.GONE)
 			.body(new ApiError("expired", exception.getMessage()));
+	}
+
+	@ExceptionHandler(InactiveException.class)
+	public ResponseEntity<ApiError> handleInactive(InactiveException exception) {
+		return ResponseEntity.status(HttpStatus.GONE)
+			.body(new ApiError("inactive", exception.getMessage()));
+	}
+
+	@ExceptionHandler(UnauthorizedException.class)
+	public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException exception) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+			.header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+			.body(new ApiError("unauthorized", exception.getMessage()));
+	}
+
+	@ExceptionHandler(ForbiddenException.class)
+	public ResponseEntity<ApiError> handleForbidden(ForbiddenException exception) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+			.body(new ApiError("forbidden", exception.getMessage()));
 	}
 
 	@ExceptionHandler(Exception.class)

@@ -1,12 +1,15 @@
 package com.example.shortener.service;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import com.example.shortener.domain.RedirectType;
 
 class UrlValidatorTest {
 
@@ -52,6 +55,19 @@ class UrlValidatorTest {
 	@ValueSource(strings = { "", "abc", "alias!", "abcdefghijklmnopqrstuvwxyz12345", "actuator", "health" })
 	void rejectsInvalidAliases(String alias) {
 		assertThrows(IllegalArgumentException.class, () -> validator.validateAlias(alias));
+	}
+
+	@Test
+	void parsesRedirectTypes() {
+		assertEquals(RedirectType.TEMPORARY, validator.parseRedirectType(null));
+		assertEquals(RedirectType.TEMPORARY, validator.parseRedirectType("temporary"));
+		assertEquals(RedirectType.PERMANENT, validator.parseRedirectType("permanent"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "", "PERMANENT", "301", "forever" })
+	void rejectsUnknownRedirectTypes(String value) {
+		assertThrows(IllegalArgumentException.class, () -> validator.parseRedirectType(value));
 	}
 
 	@Test

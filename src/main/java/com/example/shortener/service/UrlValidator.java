@@ -7,6 +7,8 @@ import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
+import com.example.shortener.domain.RedirectType;
+
 @Component
 public class UrlValidator {
 
@@ -48,6 +50,17 @@ public class UrlValidator {
 		if (alias != null && isReserved(alias)) {
 			throw new IllegalArgumentException("Alias is reserved");
 		}
+	}
+
+	public RedirectType parseRedirectType(String value) {
+		if (value == null) {
+			return RedirectType.TEMPORARY;
+		}
+		return switch (value) {
+			case "temporary" -> RedirectType.TEMPORARY;
+			case "permanent" -> RedirectType.PERMANENT;
+			default -> throw new IllegalArgumentException("redirectType must be \"temporary\" or \"permanent\"");
+		};
 	}
 
 	public void validateExpiresInDays(Integer expiresInDays) {
