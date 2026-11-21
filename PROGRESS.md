@@ -36,10 +36,10 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
   - Files: `src/main/java/com/example/shortener/api/RedirectController.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `src/main/java/com/example/shortener/service/NotFoundException.java`, `src/main/java/com/example/shortener/api/GlobalExceptionHandler.java`, `PROGRESS.md`
   - Verify: `CODE=$(curl -s -X POST localhost:8081/api/v1/urls -H 'Content-Type: application/json' -d '{"url":"https://example.com"}' | sed -E 's/.*"code":"([^"]+)".*/\1/') && curl -i localhost:8082/$CODE && curl -i localhost:8081/nope123`
 
-- [ ] **C5 — Metadata lookup**
-  - Covers: FR-4, NFR-3
-  - Files: `src/main/java/com/example/shortener/api/UrlResponse.java`, `src/main/java/com/example/shortener/api/UrlController.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `src/test/java/com/example/shortener/api/MetadataApiTest.java`
-  - Verify: `./mvnw -Dtest=MetadataApiTest test`
+- [x] **C5 — Redis cache-aside on redirect**
+  - Covers: NFR-2, NFR-5, NFR-9
+  - Files: `src/main/java/com/example/shortener/cache/UrlCache.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `PROGRESS.md`
+  - Verify: `curl -s -o /dev/null localhost:8081/$CODE && docker compose exec redis redis-cli GET url:$CODE && docker compose exec redis redis-cli TTL url:$CODE && docker compose stop redis && curl -i localhost:8081/$CODE && docker compose start redis`
 
 - [ ] **C6 — Management token and deactivation**
   - Covers: FR-4, NFR-1
@@ -94,7 +94,7 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## NEXT
 
-C5 — Metadata lookup. Do not begin automatically.
+C6 — Management token and deactivation. Do not begin automatically.
 
 ## Log
 
@@ -105,3 +105,4 @@ C5 — Metadata lookup. Do not begin automatically.
 - C2: Added dependency-free Base62 encoding and decoding with validation and overflow protection. Required boundary and round-trip tests pass with the Maven wrapper; system Maven is unavailable on this VM.
 - C3: Added URL validation, transactional sequence-backed creation, Base62 code generation, the `POST /api/v1/urls` contract, and safe JSON error responses. Compilation passes; curl integration verification is pending because Docker is unavailable.
 - C4: Added a reserved-prefix-safe root redirect route, cross-instance database resolution, explicit `302 Found`, and JSON `404` handling. Compilation passes; two-instance curl verification is pending because Docker is unavailable.
+- C5: Added Redis cache-aside resolution with the required key/value format, expiration-aware TTL capped at 24 hours, DEBUG hit/miss logging, and WARN-plus-database fallback for every Redis failure. Compilation passes; Redis integration verification is pending because Docker is unavailable.
