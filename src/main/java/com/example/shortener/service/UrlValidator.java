@@ -13,7 +13,7 @@ public class UrlValidator {
 	private static final int MAX_URL_LENGTH = 2048;
 	private static final Pattern ALIAS_PATTERN = Pattern.compile("[A-Za-z0-9_-]{4,30}");
 	// Must match the exclusions in RedirectController's route pattern.
-	private static final Set<String> RESERVED_CODES = Set.of("api", "actuator");
+	private static final Set<String> RESERVED_CODES = Set.of("api", "actuator", "health");
 
 	public static boolean isReserved(String code) {
 		return RESERVED_CODES.contains(code);

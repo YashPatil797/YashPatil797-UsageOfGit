@@ -29,7 +29,7 @@ class RedirectControllerTest {
 	private UrlService urlService;
 
 	@ParameterizedTest
-	@ValueSource(strings = { "apiv2", "actuator1", "1000" })
+	@ValueSource(strings = { "apiv2", "actuator1", "healthy", "1000" })
 	void redirectsCodesThatOnlyStartWithReservedWords(String code) throws Exception {
 		when(urlService.resolve(code)).thenReturn("https://example.com/" + code);
 
@@ -41,7 +41,7 @@ class RedirectControllerTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "/api", "/actuator", "/abcdefghijklmnopqrstuvwxyz12345" })
+	@ValueSource(strings = { "/api", "/actuator", "/health", "/abcdefghijklmnopqrstuvwxyz12345" })
 	void returnsNotFoundWithoutResolvingUnroutablePaths(String path) throws Exception {
 		mockMvc.perform(get(path))
 			.andExpect(status().isNotFound())

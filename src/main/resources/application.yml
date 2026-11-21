@@ -2,6 +2,8 @@ server:
   port: ${PORT:8080}
 
 spring:
+  application:
+    name: url-shortener
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/shortener}
     username: ${DATABASE_USERNAME:shortener}
@@ -11,17 +13,27 @@ spring:
       url: ${REDIS_URL:redis://localhost:6379}
       timeout: 200ms
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
+  flyway:
+    enabled: true
 
 app:
-  base-url: ${BASE_URL:http://localhost:8080}
+  base-url: ${BASE_URL:http://localhost:${PORT:8080}}
 
 management:
   endpoints:
     web:
+      base-path: /
       exposure:
         include: health
   endpoint:
     health:
-      show-details: always
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    # Redis is a fail-open cache, so its outage must not fail platform health checks.
+    redis:
+      enabled: false

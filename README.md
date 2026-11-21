@@ -126,9 +126,11 @@ docker compose ps
 Check health:
 
 ```bash
-curl -s http://localhost:8081/actuator/health
-curl -s http://localhost:8082/actuator/health
+curl -s http://localhost:8081/health
+curl -s http://localhost:8082/health
 ```
+
+Expected: `200 OK` with `"status":"UP"`. Health reflects PostgreSQL only; a Redis outage does not fail it because Redis is a fail-open cache.
 
 Stop the stack:
 
@@ -168,7 +170,7 @@ The integration test requires Docker and uses PostgreSQL 16 through Testcontaine
 | `BASE_URL` | Public application URL |
 | `PORT` | Supplied by App Platform |
 
-5. Configure the health endpoint as `/actuator/health`.
+5. Configure the health endpoint as `/health`.
 6. Deploy, then run the create and redirect smoke tests above.
 
 Keep database and Redis credentials in DigitalOcean secrets, never in source control.

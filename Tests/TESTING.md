@@ -20,11 +20,11 @@ docker compose logs app-2
 ## 2. Health checks
 
 ```bash
-curl -s localhost:8081/actuator/health
-curl -s localhost:8082/actuator/health
+curl -s localhost:8081/health
+curl -s localhost:8082/health
 ```
 
-Both instances should report `UP`, including PostgreSQL and Redis.
+Both instances should return `200 OK` with `"status":"UP"`. Health reflects PostgreSQL only, so it stays `UP` while Redis is stopped in the Redis fallback check below.
 
 ## 3. Create and redirect
 
