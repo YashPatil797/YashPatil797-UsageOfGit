@@ -7,7 +7,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,14 +51,11 @@ public class UrlService {
 		Instant expiresAt = request.expiresInDays() == null
 				? null
 				: Instant.now().plus(request.expiresInDays(), ChronoUnit.DAYS);
-		ShortUrl shortUrl = request.alias() == null
+		String code = request.alias() == null
 				? createGenerated(request.url(), expiresAt)
 				: createAlias(request.url(), request.alias(), expiresAt);
 
-		return new CreateUrlResponse(
-			shortUrl.getCode(),
-			baseUrl + "/" + shortUrl.getCode(),
-			shortUrl.getExpiresAt());
+		return new CreateUrlResponse(code, baseUrl + "/" + code, expiresAt);
 	}
 
 	@Transactional(readOnly = true)
@@ -83,23 +79,21 @@ public class UrlService {
 		return shortUrl.getLongUrl();
 	}
 
-	private ShortUrl createAlias(String longUrl, String alias, Instant expiresAt) {
-		long id = repository.nextId();
-		try {
-			return repository.saveAndFlush(new ShortUrl(id, alias, longUrl, expiresAt));
-		}
-		catch (DataIntegrityViolationException exception) {
+	private String createAlias(String longUrl, String alias, Instant expiresAt) {
+		if (repository.insertIfCodeAvailable(repository.nextId(), alias, longUrl, expiresAt) == 0) {
 			throw new AliasTakenException(alias);
 		}
+		return alias;
 	}
 
-	private ShortUrl createGenerated(String longUrl, Instant expiresAt) {
+	private String createGenerated(String longUrl, Instant expiresAt) {
 		for (int attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
 			long id = repository.nextId();
 			String code = Base62.encode(id);
-			// A custom alias may equal a future generated code, so occupied codes must be skipped.
-			if (!UrlValidator.isReserved(code) && repository.findByCode(code).isEmpty()) {
-				return repository.save(new ShortUrl(id, code, longUrl, expiresAt));
+			// A custom alias may already hold, or concurrently take, a future generated code.
+			if (!UrlValidator.isReserved(code)
+					&& repository.insertIfCodeAvailable(id, code, longUrl, expiresAt) == 1) {
+				return code;
 			}
 		}
 		throw new IllegalStateException("Unable to allocate a unique short code after 3 attempts");
