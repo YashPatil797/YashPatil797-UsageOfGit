@@ -126,6 +126,49 @@ class UrlServiceTest {
 		when(repository.findByCode("expired")).thenReturn(Optional.of(expired));
 
 		assertThrows(ExpiredException.class, () -> service.resolve("expired"));
+		verify(repository, never()).incrementClickCount(anyString());
+	}
+
+	@Test
+	void resolveCountsCacheHitWithoutReadingRow() {
+		when(cache.get("code")).thenReturn(Optional.of("https://example.com"));
+		when(repository.incrementClickCount("code")).thenReturn(1);
+
+		assertEquals("https://example.com", service.resolve("code"));
+		verify(repository, never()).findByCode(anyString());
+	}
+
+	@Test
+	void resolveCountsCacheMissOnce() {
+		ShortUrl shortUrl = new ShortUrl(1L, "code", "https://example.com", null);
+		when(cache.get("code")).thenReturn(Optional.empty());
+		when(repository.findByCode("code")).thenReturn(Optional.of(shortUrl));
+		when(repository.incrementClickCount("code")).thenReturn(1);
+
+		assertEquals("https://example.com", service.resolve("code"));
+		verify(repository, times(1)).incrementClickCount("code");
+		verify(cache).put("code", "https://example.com", null);
+	}
+
+	@Test
+	void resolveDoesNotRedirectStaleCacheEntryForDeletedRow() {
+		when(cache.get("code")).thenReturn(Optional.of("https://example.com"));
+		when(repository.incrementClickCount("code")).thenReturn(0);
+		when(repository.findByCode("code")).thenReturn(Optional.empty());
+
+		assertThrows(NotFoundException.class, () -> service.resolve("code"));
+		verify(repository, times(1)).incrementClickCount("code");
+	}
+
+	@Test
+	void resolveThrowsExpiredWhenLinkExpiresBeforeIncrement() {
+		ShortUrl shortUrl = new ShortUrl(1L, "code", "https://example.com", Instant.now().plusSeconds(60));
+		when(cache.get("code")).thenReturn(Optional.empty());
+		when(repository.findByCode("code")).thenReturn(Optional.of(shortUrl));
+		when(repository.incrementClickCount("code")).thenReturn(0);
+
+		assertThrows(ExpiredException.class, () -> service.resolve("code"));
+		verify(cache, never()).put(anyString(), anyString(), any());
 	}
 
 	@Test
@@ -139,6 +182,7 @@ class UrlServiceTest {
 			"http://sho.rt");
 		ShortUrl shortUrl = new ShortUrl(1L, "code", "https://example.com", null);
 		when(repository.findByCode("code")).thenReturn(Optional.of(shortUrl));
+		when(repository.incrementClickCount("code")).thenReturn(1);
 
 		String resolved = serviceWithFailingRedis.resolve("code");
 

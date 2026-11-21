@@ -29,4 +29,11 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
 			@Param("code") String code,
 			@Param("longUrl") String longUrl,
 			@Param("expiresAt") Instant expiresAt);
+
+	@Modifying
+	@Query(value = """
+			UPDATE urls SET click_count = click_count + 1
+			WHERE code = :code AND (expires_at IS NULL OR expires_at > now())
+			""", nativeQuery = true)
+	int incrementClickCount(@Param("code") String code);
 }

@@ -58,11 +58,12 @@ public class UrlService {
 		return new CreateUrlResponse(code, baseUrl + "/" + code, expiresAt);
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public String resolve(String code) {
 		Optional<String> cachedUrl = cache.get(code);
-		if (cachedUrl.isPresent()) {
-			// UrlCache rejects entries whose embedded expiry is in the past.
+		// UrlCache rejects entries whose embedded expiry is in the past. A cached entry whose row no longer
+		// counts falls through to the database so the caller gets 404 or 410 instead of a stale redirect.
+		if (cachedUrl.isPresent() && repository.incrementClickCount(code) == 1) {
 			LOGGER.debug("cache hit for code {}", code);
 			return cachedUrl.get();
 		}
@@ -72,6 +73,9 @@ public class UrlService {
 		ShortUrl shortUrl = repository.findByCode(code)
 			.orElseThrow(() -> new NotFoundException("Short URL not found"));
 		if (shortUrl.getExpiresAt() != null && !shortUrl.getExpiresAt().isAfter(now)) {
+			throw new ExpiredException(code);
+		}
+		if (repository.incrementClickCount(code) == 0) {
 			throw new ExpiredException(code);
 		}
 
