@@ -58,10 +58,10 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## Tests (T)
 
-- [ ] **T1 — Consistent validation and error responses**
-  - Covers: FR-1, FR-2, FR-3, FR-4, NFR-1
-  - Files: `src/main/java/com/example/shortener/api/ApiError.java`, `src/main/java/com/example/shortener/api/GlobalExceptionHandler.java`, `src/test/java/com/example/shortener/api/ApiErrorContractTest.java`
-  - Verify: `./mvnw -Dtest=ApiErrorContractTest test`
+- [x] **T1 — Unit tests**
+  - Covers: FR-3, NFR-4
+  - Files: `src/test/java/com/example/shortener/service/UrlValidatorTest.java`, `src/test/java/com/example/shortener/service/UrlServiceTest.java`, `PROGRESS.md`
+  - Verify: `mvn -q test -Dtest='UrlValidatorTest,UrlServiceTest'`
 
 - [ ] **T2 — Concurrency and acceptance suite**
   - Covers: FR-1, FR-2, FR-3, FR-4, FR-5, NFR-2, NFR-3
@@ -94,7 +94,7 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## NEXT
 
-C7 — Redirect and atomic hit counting. Do not begin automatically.
+T2 — Concurrency and acceptance suite. Do not begin automatically.
 
 ## Log
 
@@ -107,3 +107,4 @@ C7 — Redirect and atomic hit counting. Do not begin automatically.
 - C4: Added a reserved-prefix-safe root redirect route, cross-instance database resolution, explicit `302 Found`, and JSON `404` handling. Compilation passes; two-instance curl verification is pending because Docker is unavailable.
 - C5: Added Redis cache-aside resolution with the required key/value format, expiration-aware TTL capped at 24 hours, DEBUG hit/miss logging, and WARN-plus-database fallback for every Redis failure. Compilation passes; Redis integration verification is pending because Docker is unavailable.
 - C6: Added validated aliases and 1–365 day expiry, duplicate-alias `409`, generated-code collision retries, and expired-link `410` behavior on cached and database resolution paths. The user approved the required `UrlController` integration edit. Compilation passes; curl verification is pending because Docker is unavailable.
+- T1: Added no-context unit tests for URL and alias validation, sequence/Base62 creation, not-found and expired resolution, and Redis failure fallback. All requested tests pass with the Maven wrapper; system Maven is unavailable.
