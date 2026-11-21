@@ -37,6 +37,16 @@ Not deployed yet. The application is prepared for DigitalOcean App Platform depl
 
 Both stateless Spring Boot instances use the same PostgreSQL database and Redis cache.
 
+## High-level design
+
+![High-level design: client, load balancer, two Spring Boot instances, Redis, PostgreSQL, and Flyway](docs/images/high-level-design.jpg)
+
+- **Create** (`POST /api/v1/urls`): `UrlController` calls `UrlService`, which validates the request with `UrlValidator`, takes the next `url_id_seq` value, encodes it with `Base62`, and inserts through `ShortUrlRepository`. A code that is already taken is skipped by the database (`ON CONFLICT DO NOTHING`), not by an exception.
+- **Redirect** (`GET /{code}`): `RedirectController` calls `UrlService`, which reads `UrlCache` (Redis) first and falls back to PostgreSQL on a miss or Redis failure. Each successful redirect increments `click_count` atomically in PostgreSQL.
+- **Errors**: `GlobalExceptionHandler` turns exceptions into consistent JSON errors (`400`, `404`, `409`, `410`, `500`).
+- **Health** (`GET /health`): reports PostgreSQL only, because Redis is a fail-open cache.
+- **Schema**: Flyway applies `V1__create_urls.sql` at startup; Hibernate only validates it.
+
 ## Key design decisions
 
 | Decision | Choice | Trade-off |
