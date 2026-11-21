@@ -31,10 +31,10 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
   - Files: `src/main/java/com/example/shortener/api/UrlController.java`, `src/main/java/com/example/shortener/api/dto/CreateUrlRequest.java`, `src/main/java/com/example/shortener/api/dto/CreateUrlResponse.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `src/main/java/com/example/shortener/service/UrlValidator.java`, `src/main/java/com/example/shortener/api/GlobalExceptionHandler.java`, `PROGRESS.md`
   - Verify: `curl -s -X POST localhost:8081/api/v1/urls -H 'Content-Type: application/json' -d '{"url":"https://example.com/a/very/long/path"}' && curl -s -o /dev/null -w "%{http_code}\n" -X POST localhost:8081/api/v1/urls -H 'Content-Type: application/json' -d '{"url":"javascript:alert(1)"}'`
 
-- [ ] **C4 — Custom aliases and conflict handling**
-  - Covers: FR-2, NFR-1
-  - Files: `src/main/java/com/example/shortener/service/AliasPolicy.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `src/main/java/com/example/shortener/api/UrlController.java`, `src/test/java/com/example/shortener/api/CustomAliasApiTest.java`
-  - Verify: `./mvnw -Dtest=CustomAliasApiTest test`
+- [x] **C4 — Redirect**
+  - Covers: FR-2, FR-4
+  - Files: `src/main/java/com/example/shortener/api/RedirectController.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `src/main/java/com/example/shortener/service/NotFoundException.java`, `src/main/java/com/example/shortener/api/GlobalExceptionHandler.java`, `PROGRESS.md`
+  - Verify: `CODE=$(curl -s -X POST localhost:8081/api/v1/urls -H 'Content-Type: application/json' -d '{"url":"https://example.com"}' | sed -E 's/.*"code":"([^"]+)".*/\1/') && curl -i localhost:8082/$CODE && curl -i localhost:8081/nope123`
 
 - [ ] **C5 — Metadata lookup**
   - Covers: FR-4, NFR-3
@@ -94,7 +94,7 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## NEXT
 
-C4 — Custom aliases and conflict handling. Do not begin automatically.
+C5 — Metadata lookup. Do not begin automatically.
 
 ## Log
 
@@ -104,3 +104,4 @@ C4 — Custom aliases and conflict handling. Do not begin automatically.
 - C1: Replaced the earlier V1 schema with `url_id_seq` and `urls`, added the assigned-ID JPA entity, and added code lookup plus sequence access in the repository. Compilation passes; PostgreSQL/Flyway runtime verification is pending because Docker is not installed on this VM.
 - C2: Added dependency-free Base62 encoding and decoding with validation and overflow protection. Required boundary and round-trip tests pass with the Maven wrapper; system Maven is unavailable on this VM.
 - C3: Added URL validation, transactional sequence-backed creation, Base62 code generation, the `POST /api/v1/urls` contract, and safe JSON error responses. Compilation passes; curl integration verification is pending because Docker is unavailable.
+- C4: Added a reserved-prefix-safe root redirect route, cross-instance database resolution, explicit `302 Found`, and JSON `404` handling. Compilation passes; two-instance curl verification is pending because Docker is unavailable.

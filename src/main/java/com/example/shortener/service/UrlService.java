@@ -36,6 +36,13 @@ public class UrlService {
 		return new CreateUrlResponse(code, baseUrl + "/" + code, shortUrl.getExpiresAt());
 	}
 
+	@Transactional(readOnly = true)
+	public String resolve(String code) {
+		return repository.findByCode(code)
+			.map(ShortUrl::getLongUrl)
+			.orElseThrow(() -> new NotFoundException("Short URL not found"));
+	}
+
 	private static String stripTrailingSlashes(String value) {
 		int end = value.length();
 		while (end > 0 && value.charAt(end - 1) == '/') {

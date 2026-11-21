@@ -9,6 +9,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.example.shortener.service.NotFoundException;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -24,6 +26,12 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handleInvalidRequest(Exception exception) {
 		return ResponseEntity.badRequest()
 			.body(new ApiError("invalid_request", "Request body is invalid"));
+	}
+
+	@ExceptionHandler(NotFoundException.class)
+	public ResponseEntity<ApiError> handleNotFound(NotFoundException exception) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new ApiError("not_found", exception.getMessage()));
 	}
 
 	@ExceptionHandler(Exception.class)
