@@ -19,7 +19,7 @@ public class RedirectController {
 		this.urlService = urlService;
 	}
 
-	@GetMapping("/{code:(?!api|actuator)[A-Za-z0-9_-]{1,30}}")
+	@GetMapping("/{code:(?!api$|actuator$)[A-Za-z0-9_-]{1,30}}")
 	public ResponseEntity<Void> redirect(@PathVariable String code) {
 		URI location = URI.create(urlService.resolve(code));
 		return ResponseEntity.status(HttpStatus.FOUND)

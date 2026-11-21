@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +23,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import com.example.shortener.api.dto.CreateUrlRequest;
 import com.example.shortener.api.dto.CreateUrlResponse;
 import com.example.shortener.cache.UrlCache;
+import com.example.shortener.domain.Base62;
 import com.example.shortener.domain.ShortUrl;
 import com.example.shortener.repository.ShortUrlRepository;
 
@@ -61,6 +63,21 @@ class UrlServiceTest {
 		assertEquals(238328L, captor.getValue().getId());
 		assertEquals("1000", captor.getValue().getCode());
 		assertEquals("https://example.com", captor.getValue().getLongUrl());
+	}
+
+	@Test
+	void createSkipsGeneratedCodeThatIsReserved() {
+		long reservedId = Base62.decode("actuator");
+		when(repository.nextId()).thenReturn(reservedId, reservedId + 1);
+		String nextCode = Base62.encode(reservedId + 1);
+		when(repository.findByCode(nextCode)).thenReturn(Optional.empty());
+		when(repository.save(any(ShortUrl.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		CreateUrlResponse response = service.create(
+			new CreateUrlRequest("https://example.com", null, null));
+
+		assertEquals(nextCode, response.code());
+		verify(repository, never()).findByCode("actuator");
 	}
 
 	@Test

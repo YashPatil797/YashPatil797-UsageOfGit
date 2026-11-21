@@ -8,6 +8,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.shortener.service.AliasTakenException;
 import com.example.shortener.service.ExpiredException;
@@ -34,6 +36,12 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handleNotFound(NotFoundException exception) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 			.body(new ApiError("not_found", exception.getMessage()));
+	}
+
+	@ExceptionHandler({ NoResourceFoundException.class, NoHandlerFoundException.class })
+	public ResponseEntity<ApiError> handleNoRoute(Exception exception) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new ApiError("not_found", "Resource not found"));
 	}
 
 	@ExceptionHandler(AliasTakenException.class)

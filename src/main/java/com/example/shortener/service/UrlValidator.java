@@ -2,6 +2,7 @@ package com.example.shortener.service;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
@@ -11,6 +12,12 @@ public class UrlValidator {
 
 	private static final int MAX_URL_LENGTH = 2048;
 	private static final Pattern ALIAS_PATTERN = Pattern.compile("[A-Za-z0-9_-]{4,30}");
+	// Must match the exclusions in RedirectController's route pattern.
+	private static final Set<String> RESERVED_CODES = Set.of("api", "actuator");
+
+	public static boolean isReserved(String code) {
+		return RESERVED_CODES.contains(code);
+	}
 
 	public void validate(String value) {
 		if (value == null || value.isBlank()) {
@@ -37,6 +44,9 @@ public class UrlValidator {
 	public void validateAlias(String alias) {
 		if (alias != null && !ALIAS_PATTERN.matcher(alias).matches()) {
 			throw new IllegalArgumentException("Alias must be 4 to 30 URL-safe characters");
+		}
+		if (alias != null && isReserved(alias)) {
+			throw new IllegalArgumentException("Alias is reserved");
 		}
 	}
 

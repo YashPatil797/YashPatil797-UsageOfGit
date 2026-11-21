@@ -98,7 +98,7 @@ public class UrlService {
 			long id = repository.nextId();
 			String code = Base62.encode(id);
 			// A custom alias may equal a future generated code, so occupied codes must be skipped.
-			if (repository.findByCode(code).isEmpty()) {
+			if (!UrlValidator.isReserved(code) && repository.findByCode(code).isEmpty()) {
 				return repository.save(new ShortUrl(id, code, longUrl, expiresAt));
 			}
 		}

@@ -43,13 +43,13 @@ class UrlValidatorTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "abcd", "my-sale", "Alias_123", "abcdefghijklmnopqrstuvwxyz1234" })
+	@ValueSource(strings = { "abcd", "my-sale", "Alias_123", "abcdefghijklmnopqrstuvwxyz1234", "apiv2", "actuator1" })
 	void acceptsValidAliases(String alias) {
 		assertDoesNotThrow(() -> validator.validateAlias(alias));
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "", "abc", "alias!", "abcdefghijklmnopqrstuvwxyz12345" })
+	@ValueSource(strings = { "", "abc", "alias!", "abcdefghijklmnopqrstuvwxyz12345", "actuator" })
 	void rejectsInvalidAliases(String alias) {
 		assertThrows(IllegalArgumentException.class, () -> validator.validateAlias(alias));
 	}
