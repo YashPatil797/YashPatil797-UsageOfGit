@@ -68,6 +68,11 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
   - Files: `src/test/java/com/example/shortener/UrlShortenerAcceptanceTest.java`, `src/test/java/com/example/shortener/repository/HitCountConcurrencyTest.java`
   - Verify: `./mvnw test`
 
+- [x] **T3 — Cross-instance concurrency test**
+  - Covers: NFR-1
+  - Files: `src/test/java/com/example/shortener/ConcurrencyIntegrationTest.java`, `PROGRESS.md`
+  - Verify: `mvn -q test -Dtest=ConcurrencyIntegrationTest`
+
 ## Deploy (D)
 
 - [ ] **D1 — Runnable local container stack**
@@ -108,3 +113,4 @@ T2 — Concurrency and acceptance suite. Do not begin automatically.
 - C5: Added Redis cache-aside resolution with the required key/value format, expiration-aware TTL capped at 24 hours, DEBUG hit/miss logging, and WARN-plus-database fallback for every Redis failure. Compilation passes; Redis integration verification is pending because Docker is unavailable.
 - C6: Added validated aliases and 1–365 day expiry, duplicate-alias `409`, generated-code collision retries, and expired-link `410` behavior on cached and database resolution paths. The user approved the required `UrlController` integration edit. Compilation passes; curl verification is pending because Docker is unavailable.
 - T1: Added no-context unit tests for URL and alias validation, sequence/Base62 creation, not-found and expired resolution, and Redis failure fallback. All requested tests pass with the Maven wrapper; system Maven is unavailable.
+- T3: Added a 100-thread, synchronized-start HTTP integration test asserting 100 created responses, distinct codes, and database rows. No reusable T2 container setup existed, so the test owns its PostgreSQL 16 container. It compiles successfully but is skipped on this VM because Docker is unavailable.
