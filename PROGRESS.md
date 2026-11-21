@@ -16,10 +16,10 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## Core (C)
 
-- [ ] **C1 — Persistent URL domain and repository**
-  - Covers: FR-1, FR-4, NFR-2
-  - Files: `src/main/java/com/example/shortener/domain/ShortUrl.java`, `src/main/java/com/example/shortener/domain/RedirectType.java`, `src/main/java/com/example/shortener/repository/ShortUrlRepository.java`, `src/test/java/com/example/shortener/repository/ShortUrlRepositoryTest.java`
-  - Verify: `./mvnw -Dtest=ShortUrlRepositoryTest test`
+- [x] **C1 — Schema, entity, and repository**
+  - Covers: NFR-1, NFR-6
+  - Files: `src/main/resources/db/migration/V1__create_urls.sql`, `src/main/java/com/example/shortener/domain/ShortUrl.java`, `src/main/java/com/example/shortener/repository/ShortUrlRepository.java`, `PROGRESS.md`
+  - Verify: `docker compose up --build -d && docker compose exec postgres psql -U shortener -c '\d urls' && docker compose logs app-1 | grep -i flyway`
 
 - [ ] **C2 — Automatic short-code generation**
   - Covers: FR-1, NFR-1
@@ -94,10 +94,11 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## NEXT
 
-C1 — Persistent URL domain and repository. Do not begin automatically.
+C2 — Automatic short-code generation. Do not begin automatically.
 
 ## Log
 
 - S2: Added a non-root, memory-aware multi-stage image and a Compose stack with PostgreSQL 16, Redis 7, and two application instances on ports 8081/8082. The existing `V1__create_short_urls.sql` migration supplies the Flyway schema, so no empty baseline migration was needed.
 - S1: Added the Spring Boot 3.3/Java 21 walking-skeleton entry point and YAML configuration for PostgreSQL, Redis, JPA validation, base URL, port, and detailed health reporting. Configured the Boot plugin to package `ShortenerApplication`. Legacy `UrlShortenerApplication.java` and `application.properties` remain untouched because they were outside this slice's allowed file list.
 - S2 revalidation: Confirmed the Dockerfile, two-instance Compose model, YAML syntax, and packaged JAR after S1. Docker and curl health checks remain pending because Docker is not installed on this VM.
+- C1: Replaced the earlier V1 schema with `url_id_seq` and `urls`, added the assigned-ID JPA entity, and added code lookup plus sequence access in the repository. Compilation passes; PostgreSQL/Flyway runtime verification is pending because Docker is not installed on this VM.

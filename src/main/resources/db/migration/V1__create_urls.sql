@@ -1,0 +1,10 @@
+CREATE SEQUENCE url_id_seq START WITH 238328;
+
+CREATE TABLE urls (
+    id BIGINT PRIMARY KEY,
+    code VARCHAR(30) NOT NULL UNIQUE,
+    long_url TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NULL,
+    click_count BIGINT NOT NULL DEFAULT 0
+);
