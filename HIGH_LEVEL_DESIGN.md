@@ -2,13 +2,13 @@
 
 ## 1. Purpose
 
-This document translates the functional and non-functional requirements in `requirements.md` into an implementation architecture for the Spring Boot URL shortener.
+This document translates the functional and non-functional requirements in `REQUIREMENTS.md` into an implementation architecture for the Spring Boot URL shortener.
 
 The design favors a small, testable, cloud-deployable service that can be completed within the challenge scope. Distributed caching, multi-region deployment, and advanced analytics are intentionally excluded from the MVP.
 
 ## 2. Architecture
 
-The application is a Spring Boot service backed by a file-based H2 relational database.
+The application is a stateless Spring Boot service backed by PostgreSQL 16, with Redis 7 used only as an optional read-through cache.
 
 ```text
                        +----------------------+
@@ -31,17 +31,17 @@ The application is a Spring Boot service backed by a file-based H2 relational da
                        | - Ownership checks   |
                        | - Error handling     |
                        +----------+-----------+
-                                  |
-                             JPA / JDBC
-                                  |
-                       +----------v-----------+
-                       | File-backed H2 DB    |
-                       +----------------------+
+                         +--------+--------+
+                         |                 |
+                    JPA / JDBC          Spring Data
+                         |                 |
+              +----------v-----------+ +---v-------------+
+              | PostgreSQL 16        | | Redis 7 cache   |
+              | Source of truth      | | Rebuildable     |
+              +----------------------+ +-----------------+
 ```
 
-H2 is used in every environment. Local tests may use an in-memory database, while runtime environments use file mode. The cloud deployment must mount the H2 data directory on a persistent volume; an ephemeral container filesystem would lose links during replacement or redeployment.
-
-Because embedded H2 is tied to one application filesystem, the MVP runs as a single application instance. Horizontal multi-instance deployment requires migration to an external database.
+PostgreSQL remains authoritative for mappings, ownership, state, and counters. Redis entries are disposable and must be invalidated when a link is deactivated or changed.
 
 ## 3. Main Components
 
@@ -80,11 +80,15 @@ Contains the main business rules:
 
 ### 3.4 Persistence Layer
 
-A Spring Data JPA repository provides access to H2. The database is the source of truth for URL mappings, status, ownership, and hit counts.
+A Spring Data JPA repository provides access to PostgreSQL. Flyway owns all schema changes, while Hibernate runs with `ddl-auto=validate`. PostgreSQL is the source of truth for URL mappings, status, ownership, and hit counts.
 
 The short-code column has a database-level unique constraint. This guarantees uniqueness under concurrent create requests even if application-level checks race.
 
-### 3.5 Management Credential
+### 3.5 Cache
+
+Spring Data Redis may cache active short-code mappings. A cache miss falls through to PostgreSQL, and inactive or missing links are not required to be cached. Deactivation evicts the corresponding key before returning success. Correctness must not depend on Redis availability.
+
+### 3.6 Management Credential
 
 The MVP uses a lightweight per-link management token:
 
@@ -96,7 +100,7 @@ The MVP uses a lightweight per-link management token:
 
 This avoids implementing full user accounts while still establishing ownership. Tokens must never appear in short URLs, logs, or public metadata.
 
-### 3.6 Health Endpoint
+### 3.7 Health Endpoint
 
 `GET /health` reports application availability. A deeper readiness check may verify database connectivity for use by the cloud platform.
 
@@ -249,43 +253,39 @@ The service reads configuration from environment variables:
 | Variable | Purpose |
 |---|---|
 | `PORT` | HTTP port assigned by the platform |
-| `PUBLIC_BASE_URL` | Base used to construct complete short URLs |
-| `DATABASE_URL` | H2 JDBC URL; defaults to `jdbc:h2:file:./data/urlshortener` |
-| `DATABASE_USERNAME` | H2 database user; defaults to `sa` |
-| `DATABASE_PASSWORD` | Database password |
-| `H2_CONSOLE_ENABLED` | Enables the H2 browser console; defaults to `false` |
-| `LOG_LEVEL` | Optional runtime logging level |
+| `BASE_URL` | Public base used to construct complete short URLs |
+| `DATABASE_URL` | PostgreSQL JDBC URL, including credentials when required |
+| `REDIS_URL` | Redis connection URL |
 
-Automated tests use in-memory H2. Local and deployed runtime profiles use file-backed H2. The deployment must map `./data` or the configured database path to durable storage.
+Local PostgreSQL and Redis run through Docker Compose. Integration tests use PostgreSQL 16 through Testcontainers.
 
 ## 11. Deployment
 
-The deployable unit is an executable Spring Boot JAR or container image.
+The deployable unit is the repository `Dockerfile`, deployed as a web service on DigitalOcean App Platform.
 
 Production topology:
 
-- One Spring Boot application instance.
-- A file-backed H2 database on a mounted persistent volume.
+- One or more stateless Spring Boot application instances.
+- A managed PostgreSQL 16 database as the source of truth.
+- A managed Redis 7 instance for rebuildable cache data.
 - A cloud load balancer or ingress terminating HTTPS.
 - Platform health checks calling `/health`.
 - Environment-based configuration and secret injection.
 
 Graceful shutdown allows in-flight requests to complete when an instance is replaced.
-
-The H2 data files must not be stored only in the container image or ephemeral writable layer. Backups should copy or snapshot the persistent volume while coordinating with the application to maintain database consistency.
+DigitalOcean supplies `PORT`; managed database and cache connection values are mapped to `DATABASE_URL` and `REDIS_URL`, while `BASE_URL` is set to the public application URL.
 
 ## 12. Scaling Path
 
-The MVP requires no distributed cache. Indexed H2 lookup is sufficient for the challenge workload and one service instance.
+Indexed PostgreSQL lookup is sufficient for correctness. Redis reduces repeated redirect reads but never replaces the database.
 
 If traffic grows:
 
-1. Migrate from embedded H2 to a managed external relational database.
-2. Scale stateless application instances horizontally after the database migration.
-3. Add database connection pooling and read monitoring.
-4. Cache active URL mappings, with explicit invalidation on deactivation.
-5. Move hit events to an asynchronous durable queue if exact synchronous counters become a bottleneck.
-6. Partition data by a stable hash of the short code only when a single database is no longer sufficient.
+1. Scale stateless application instances horizontally.
+2. Tune database connection pooling and add query monitoring.
+3. Tune Redis TTLs and explicit invalidation.
+4. Move hit events to an asynchronous durable queue if synchronous counters become a bottleneck.
+5. Partition data by a stable hash of the short code only when one PostgreSQL cluster is no longer sufficient.
 
 Caching and asynchronous counting add consistency trade-offs and are deliberately deferred.
 
@@ -295,13 +295,13 @@ Caching and asynchronous counting add consistency trade-offs and are deliberatel
 - Service tests for code generation, collision retry, ownership, and status transitions.
 - Repository tests for uniqueness and atomic concurrent hit increments.
 - Controller tests for all required HTTP statuses and response headers.
-- Integration tests using file-backed H2 in addition to fast in-memory tests.
+- Integration tests using PostgreSQL 16 through Testcontainers.
 - Smoke test for startup and `/health`.
 
 ## 14. Known Limitations
 
 - No full user-account system.
-- The H2 deployment is limited to a single application instance and depends on persistent-volume availability and backups.
+- Redis cache entries can be temporarily stale during failures; PostgreSQL remains authoritative.
 - Public metadata reveals the original URL; protect the endpoint in a future private-link model.
 - A client may cache `301` and bypass later deactivation or hit counting.
 - No expiration, deletion, malicious-link scanning, advanced analytics, or multi-region guarantees.

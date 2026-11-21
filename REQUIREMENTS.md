@@ -8,7 +8,7 @@ The implementation should prioritize correctness, simplicity, and demonstrable d
 
 ## 2. Functional Requirements
 
-### 2.1 Create a Short URL
+### FR-1: Create a Short URL
 
 - Accept a required destination URL and an optional custom alias.
 - Validate that the destination is an absolute URL using the `http` or `https` scheme.
@@ -21,7 +21,7 @@ The implementation should prioritize correctness, simplicity, and demonstrable d
   - The original destination URL.
   - Its creation time and active status.
 
-### 2.2 Custom Alias
+### FR-2: Custom Alias
 
 - Allow a caller to request a user-defined short code such as `my-link`.
 - An alias must:
@@ -33,7 +33,7 @@ The implementation should prioritize correctness, simplicity, and demonstrable d
 - Do not silently replace an invalid or duplicate requested alias with a generated code.
 - Fall back to automatic code generation only when the alias is omitted.
 
-### 2.3 Redirect a Short URL
+### FR-3: Redirect a Short URL
 
 - Look up the requested short code.
 - Redirect an active link to its original URL.
@@ -45,7 +45,7 @@ The implementation should prioritize correctness, simplicity, and demonstrable d
 - Return `410 Gone` with a meaningful error when the code exists but is inactive.
 - Never redirect an unknown or inactive link.
 
-### 2.4 Metadata and Link Status
+### FR-4: Metadata and Link Status
 
 - Return metadata for a given short code containing:
   - Short code and complete short URL.
@@ -59,7 +59,7 @@ The implementation should prioritize correctness, simplicity, and demonstrable d
 - Deactivation must preserve the URL, metadata, hit count, and alias reservation.
 - The service must authenticate the management request and verify link ownership. The chosen ownership mechanism may be lightweight, but it must be documented and must not expose credentials in URLs or logs.
 
-### 2.5 Health Check
+### FR-5: Health Check
 
 - Expose a health endpoint for deployment and uptime checks.
 - Return a successful response when the application is running and able to serve requests.
@@ -138,7 +138,7 @@ Each stored URL record must contain:
 - An owner identifier.
 - The configured redirect type.
 
-Persistence must use a file-backed H2 database. The H2 data directory must be mounted on persistent storage in the deployed environment so records survive application restarts and redeployments. Hosting the database on ephemeral container storage does not satisfy this requirement.
+PostgreSQL 16 is the source of truth and must persist records across application restarts and deployments. Redis 7 may cache URL mappings but must never be the only copy of link data. Schema changes must be applied through Flyway migrations, and Hibernate schema generation must remain disabled with `ddl-auto=validate`.
 
 Short codes must:
 
@@ -152,7 +152,7 @@ Hit-count updates must be atomic so concurrent redirects do not lose increments.
 
 ## 5. Non-Functional Requirements
 
-### Security
+### NFR-1: Security
 
 - Reject unsupported URL schemes such as `javascript:`, `data:`, and `file:`.
 - Use parameterized database operations or an equivalent safe persistence API.
@@ -163,20 +163,20 @@ Hit-count updates must be atomic so concurrent redirects do not lose increments.
 - Authenticate link-management requests and authorize deactivation against the stored owner.
 - Do not expose ownership credentials or management tokens in public metadata.
 
-### Reliability
+### NFR-2: Reliability
 
 - Handle malformed requests without crashing.
 - Handle duplicate-code collisions safely.
 - Log startup failures and unexpected server errors.
 - Shut down cleanly when the hosting platform sends a termination signal.
 
-### Performance
+### NFR-3: Performance
 
 - Redirect lookup should use an indexed or key-based query.
 - The service should respond without unnecessary external calls.
 - No large-scale distributed design is required for the MVP.
 
-### Portability
+### NFR-4: Portability
 
 - The service must run locally using documented commands.
 - It must listen on a configurable port and network interface suitable for cloud hosting.
@@ -188,7 +188,8 @@ Configuration should be supplied through environment variables, including:
 
 - Application port.
 - Public base URL used to construct short URLs.
-- Database connection string or equivalent persistence configuration.
+- PostgreSQL connection URL.
+- Redis connection URL.
 - Runtime environment or log level, if needed.
 
 Required variables, defaults, and local-development values must be documented.
