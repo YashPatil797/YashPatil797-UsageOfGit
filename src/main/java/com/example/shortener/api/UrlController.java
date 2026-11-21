@@ -23,7 +23,7 @@ public class UrlController {
 
 	@PostMapping
 	public ResponseEntity<CreateUrlResponse> create(@RequestBody CreateUrlRequest request) {
-		CreateUrlResponse response = urlService.create(request == null ? null : request.url());
+		CreateUrlResponse response = urlService.create(request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 }

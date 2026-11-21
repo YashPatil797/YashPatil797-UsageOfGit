@@ -41,10 +41,10 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
   - Files: `src/main/java/com/example/shortener/cache/UrlCache.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `PROGRESS.md`
   - Verify: `curl -s -o /dev/null localhost:8081/$CODE && docker compose exec redis redis-cli GET url:$CODE && docker compose exec redis redis-cli TTL url:$CODE && docker compose stop redis && curl -i localhost:8081/$CODE && docker compose start redis`
 
-- [ ] **C6 — Management token and deactivation**
-  - Covers: FR-4, NFR-1
-  - Files: `src/main/java/com/example/shortener/service/ManagementTokenService.java`, `src/main/java/com/example/shortener/api/UpdateUrlRequest.java`, `src/main/java/com/example/shortener/api/UrlController.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `src/test/java/com/example/shortener/api/DeactivationApiTest.java`
-  - Verify: `./mvnw -Dtest=DeactivationApiTest test`
+- [x] **C6 — Custom alias and expiry**
+  - Covers: FR-5, FR-6
+  - Files: `src/main/java/com/example/shortener/api/dto/CreateUrlRequest.java`, `src/main/java/com/example/shortener/api/UrlController.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `src/main/java/com/example/shortener/service/UrlValidator.java`, `src/main/java/com/example/shortener/service/AliasTakenException.java`, `src/main/java/com/example/shortener/service/ExpiredException.java`, `src/main/java/com/example/shortener/api/GlobalExceptionHandler.java`, `PROGRESS.md`
+  - Verify: `curl -s -X POST localhost:8081/api/v1/urls -H 'Content-Type: application/json' -d '{"url":"https://example.com","alias":"my-sale"}' && curl -s -o /dev/null -w "%{http_code}\n" -X POST localhost:8081/api/v1/urls -H 'Content-Type: application/json' -d '{"url":"https://x.com","alias":"my-sale"}' && curl -i localhost:8081/my-sale`
 
 - [ ] **C7 — Redirect and atomic hit counting**
   - Covers: FR-3, FR-4, NFR-2, NFR-3
@@ -94,7 +94,7 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## NEXT
 
-C6 — Management token and deactivation. Do not begin automatically.
+C7 — Redirect and atomic hit counting. Do not begin automatically.
 
 ## Log
 
@@ -106,3 +106,4 @@ C6 — Management token and deactivation. Do not begin automatically.
 - C3: Added URL validation, transactional sequence-backed creation, Base62 code generation, the `POST /api/v1/urls` contract, and safe JSON error responses. Compilation passes; curl integration verification is pending because Docker is unavailable.
 - C4: Added a reserved-prefix-safe root redirect route, cross-instance database resolution, explicit `302 Found`, and JSON `404` handling. Compilation passes; two-instance curl verification is pending because Docker is unavailable.
 - C5: Added Redis cache-aside resolution with the required key/value format, expiration-aware TTL capped at 24 hours, DEBUG hit/miss logging, and WARN-plus-database fallback for every Redis failure. Compilation passes; Redis integration verification is pending because Docker is unavailable.
+- C6: Added validated aliases and 1–365 day expiry, duplicate-alias `409`, generated-code collision retries, and expired-link `410` behavior on cached and database resolution paths. The user approved the required `UrlController` integration edit. Compilation passes; curl verification is pending because Docker is unavailable.

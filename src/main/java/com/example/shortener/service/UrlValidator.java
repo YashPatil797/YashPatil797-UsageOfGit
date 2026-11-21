@@ -2,6 +2,7 @@ package com.example.shortener.service;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
 public class UrlValidator {
 
 	private static final int MAX_URL_LENGTH = 2048;
+	private static final Pattern ALIAS_PATTERN = Pattern.compile("[A-Za-z0-9_-]{4,30}");
 
 	public void validate(String value) {
 		if (value == null || value.isBlank()) {
@@ -29,6 +31,18 @@ public class UrlValidator {
 		}
 		catch (URISyntaxException exception) {
 			throw new IllegalArgumentException("URL is not valid", exception);
+		}
+	}
+
+	public void validateAlias(String alias) {
+		if (alias != null && !ALIAS_PATTERN.matcher(alias).matches()) {
+			throw new IllegalArgumentException("Alias must be 4 to 30 URL-safe characters");
+		}
+	}
+
+	public void validateExpiresInDays(Integer expiresInDays) {
+		if (expiresInDays != null && (expiresInDays < 1 || expiresInDays > 365)) {
+			throw new IllegalArgumentException("expiresInDays must be between 1 and 365");
 		}
 	}
 }

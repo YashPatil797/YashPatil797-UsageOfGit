@@ -9,6 +9,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.example.shortener.service.AliasTakenException;
+import com.example.shortener.service.ExpiredException;
 import com.example.shortener.service.NotFoundException;
 
 @RestControllerAdvice
@@ -32,6 +34,18 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handleNotFound(NotFoundException exception) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 			.body(new ApiError("not_found", exception.getMessage()));
+	}
+
+	@ExceptionHandler(AliasTakenException.class)
+	public ResponseEntity<ApiError> handleAliasTaken(AliasTakenException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(new ApiError("alias_taken", exception.getMessage()));
+	}
+
+	@ExceptionHandler(ExpiredException.class)
+	public ResponseEntity<ApiError> handleExpired(ExpiredException exception) {
+		return ResponseEntity.status(HttpStatus.GONE)
+			.body(new ApiError("expired", exception.getMessage()));
 	}
 
 	@ExceptionHandler(Exception.class)
