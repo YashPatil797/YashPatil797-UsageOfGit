@@ -26,10 +26,10 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
   - Files: `src/main/java/com/example/shortener/domain/Base62.java`, `src/test/java/com/example/shortener/domain/Base62Test.java`, `PROGRESS.md`
   - Verify: `mvn -q test -Dtest=Base62Test`
 
-- [ ] **C3 — Create-short-URL endpoint**
-  - Covers: FR-1, NFR-1
-  - Files: `src/main/java/com/example/shortener/api/CreateUrlRequest.java`, `src/main/java/com/example/shortener/api/UrlResponse.java`, `src/main/java/com/example/shortener/api/UrlController.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `src/test/java/com/example/shortener/api/CreateUrlApiTest.java`
-  - Verify: `./mvnw -Dtest=CreateUrlApiTest test`
+- [x] **C3 — Create short URL**
+  - Covers: FR-1, FR-3, FR-7
+  - Files: `src/main/java/com/example/shortener/api/UrlController.java`, `src/main/java/com/example/shortener/api/dto/CreateUrlRequest.java`, `src/main/java/com/example/shortener/api/dto/CreateUrlResponse.java`, `src/main/java/com/example/shortener/service/UrlService.java`, `src/main/java/com/example/shortener/service/UrlValidator.java`, `src/main/java/com/example/shortener/api/GlobalExceptionHandler.java`, `PROGRESS.md`
+  - Verify: `curl -s -X POST localhost:8081/api/v1/urls -H 'Content-Type: application/json' -d '{"url":"https://example.com/a/very/long/path"}' && curl -s -o /dev/null -w "%{http_code}\n" -X POST localhost:8081/api/v1/urls -H 'Content-Type: application/json' -d '{"url":"javascript:alert(1)"}'`
 
 - [ ] **C4 — Custom aliases and conflict handling**
   - Covers: FR-2, NFR-1
@@ -94,7 +94,7 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## NEXT
 
-C3 — Create-short-URL endpoint. Do not begin automatically.
+C4 — Custom aliases and conflict handling. Do not begin automatically.
 
 ## Log
 
@@ -103,3 +103,4 @@ C3 — Create-short-URL endpoint. Do not begin automatically.
 - S2 revalidation: Confirmed the Dockerfile, two-instance Compose model, YAML syntax, and packaged JAR after S1. Docker and curl health checks remain pending because Docker is not installed on this VM.
 - C1: Replaced the earlier V1 schema with `url_id_seq` and `urls`, added the assigned-ID JPA entity, and added code lookup plus sequence access in the repository. Compilation passes; PostgreSQL/Flyway runtime verification is pending because Docker is not installed on this VM.
 - C2: Added dependency-free Base62 encoding and decoding with validation and overflow protection. Required boundary and round-trip tests pass with the Maven wrapper; system Maven is unavailable on this VM.
+- C3: Added URL validation, transactional sequence-backed creation, Base62 code generation, the `POST /api/v1/urls` contract, and safe JSON error responses. Compilation passes; curl integration verification is pending because Docker is unavailable.
