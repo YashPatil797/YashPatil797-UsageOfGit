@@ -6,13 +6,13 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 - [x] **S1 — Project foundation**
   - Covers: NFR-2, NFR-4
-  - Files: `pom.xml`, `Dockerfile`, `compose.yaml`, `src/main/resources/application.properties`, `src/main/resources/db/migration/V1__create_short_urls.sql`, `src/main/java/com/example/shortener/UrlShortenerApplication.java`
+  - Files: `pom.xml`, `Dockerfile`, `docker-compose.yml`, `src/main/resources/application.properties`, `src/main/resources/db/migration/V1__create_short_urls.sql`, `src/main/java/com/example/shortener/UrlShortenerApplication.java`
   - Verify: `./mvnw test`
 
-- [ ] **S2 — Typed configuration and health contract**
-  - Covers: FR-5, NFR-2, NFR-4
-  - Files: `src/main/java/com/example/shortener/config/ShortenerProperties.java`, `src/main/resources/application.properties`, `src/test/java/com/example/shortener/api/HealthEndpointTest.java`
-  - Verify: `./mvnw -Dtest=HealthEndpointTest test`
+- [x] **S2 — Docker and two-instance Compose stack**
+  - Covers: NFR-7, NFR-11
+  - Files: `Dockerfile`, `docker-compose.yml`, `.gitignore`, `.dockerignore`, `PROGRESS.md`
+  - Verify: `docker compose up --build -d && curl localhost:8081/actuator/health && curl localhost:8082/actuator/health`
 
 ## Core (C)
 
@@ -94,6 +94,8 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## NEXT
 
-S2 — Typed configuration and health contract.
+C1 — Persistent URL domain and repository. Do not begin automatically.
 
 ## Log
+
+- S2: Added a non-root, memory-aware multi-stage image and a Compose stack with PostgreSQL 16, Redis 7, and two application instances on ports 8081/8082. The existing `V1__create_short_urls.sql` migration supplies the Flyway schema, so no empty baseline migration was needed.
