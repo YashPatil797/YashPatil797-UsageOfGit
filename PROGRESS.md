@@ -87,9 +87,9 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## Wrap-up (W)
 
-- [ ] **W1 — API and operations documentation**
+- [x] **W1 — Interviewer README**
   - Covers: FR-1, FR-2, FR-3, FR-4, FR-5, NFR-1, NFR-4
-  - Files: `README.md`, `HIGH_LEVEL_DESIGN.md`
+  - Files: `README.md`, `PROGRESS.md`
   - Verify: `./mvnw test`
 
 - [ ] **W2 — Final acceptance and clean build**
@@ -99,7 +99,7 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## NEXT
 
-T2 — Concurrency and acceptance suite. Do not begin automatically.
+W2 — Final acceptance and clean build. Do not begin automatically.
 
 ## Log
 
@@ -114,3 +114,4 @@ T2 — Concurrency and acceptance suite. Do not begin automatically.
 - C6: Added validated aliases and 1–365 day expiry, duplicate-alias `409`, generated-code collision retries, and expired-link `410` behavior on cached and database resolution paths. The user approved the required `UrlController` integration edit. Compilation passes; curl verification is pending because Docker is unavailable.
 - T1: Added no-context unit tests for URL and alias validation, sequence/Base62 creation, not-found and expired resolution, and Redis failure fallback. All requested tests pass with the Maven wrapper; system Maven is unavailable.
 - T3: Added a 100-thread, synchronized-start HTTP integration test asserting 100 created responses, distinct codes, and database rows. No reusable T2 container setup existed, so the test owns its PostgreSQL 16 container. It compiles successfully but is skipped on this VM because Docker is unavailable.
+- W1: Added a scannable interviewer README covering architecture, design trade-offs, API examples, local operation, tests, DigitalOcean deployment, load-test expectations, and next steps. No live URL or measured load result was invented; both are marked pending. `HIGH_LEVEL_DESIGN.md` is linked because `DESIGN.md` does not exist.
