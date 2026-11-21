@@ -8,7 +8,7 @@ The design favors a small, testable, cloud-deployable service that can be comple
 
 ## 2. Architecture
 
-The application is a stateless Spring Boot service backed by a relational database.
+The application is a Spring Boot service backed by a file-based H2 relational database.
 
 ```text
                        +----------------------+
@@ -35,11 +35,13 @@ The application is a stateless Spring Boot service backed by a relational databa
                              JPA / JDBC
                                   |
                        +----------v-----------+
-                       | PostgreSQL Database  |
+                       | File-backed H2 DB    |
                        +----------------------+
 ```
 
-H2 may be used for local development and automated tests. PostgreSQL is the production persistence store.
+H2 is used in every environment. Local tests may use an in-memory database, while runtime environments use file mode. The cloud deployment must mount the H2 data directory on a persistent volume; an ephemeral container filesystem would lose links during replacement or redeployment.
+
+Because embedded H2 is tied to one application filesystem, the MVP runs as a single application instance. Horizontal multi-instance deployment requires migration to an external database.
 
 ## 3. Main Components
 
@@ -78,7 +80,7 @@ Contains the main business rules:
 
 ### 3.4 Persistence Layer
 
-A Spring Data JPA repository provides database access. The database is the source of truth for URL mappings, status, ownership, and hit counts.
+A Spring Data JPA repository provides access to H2. The database is the source of truth for URL mappings, status, ownership, and hit counts.
 
 The short-code column has a database-level unique constraint. This guarantees uniqueness under concurrent create requests even if application-level checks race.
 
@@ -248,12 +250,13 @@ The service reads configuration from environment variables:
 |---|---|
 | `PORT` | HTTP port assigned by the platform |
 | `PUBLIC_BASE_URL` | Base used to construct complete short URLs |
-| `DATABASE_URL` | Production database connection |
-| `DATABASE_USERNAME` | Database user when not embedded in the URL |
+| `DATABASE_URL` | H2 JDBC URL; defaults to `jdbc:h2:file:./data/urlshortener` |
+| `DATABASE_USERNAME` | H2 database user; defaults to `sa` |
 | `DATABASE_PASSWORD` | Database password |
+| `H2_CONSOLE_ENABLED` | Enables the H2 browser console; defaults to `false` |
 | `LOG_LEVEL` | Optional runtime logging level |
 
-Local development may use an H2 profile. Production uses PostgreSQL and schema migrations.
+Automated tests use in-memory H2. Local and deployed runtime profiles use file-backed H2. The deployment must map `./data` or the configured database path to durable storage.
 
 ## 11. Deployment
 
@@ -261,25 +264,28 @@ The deployable unit is an executable Spring Boot JAR or container image.
 
 Production topology:
 
-- One or more stateless application instances.
-- A managed PostgreSQL database.
+- One Spring Boot application instance.
+- A file-backed H2 database on a mounted persistent volume.
 - A cloud load balancer or ingress terminating HTTPS.
 - Platform health checks calling `/health`.
 - Environment-based configuration and secret injection.
 
 Graceful shutdown allows in-flight requests to complete when an instance is replaced.
 
+The H2 data files must not be stored only in the container image or ephemeral writable layer. Backups should copy or snapshot the persistent volume while coordinating with the application to maintain database consistency.
+
 ## 12. Scaling Path
 
-The MVP requires no distributed cache. Indexed database lookup is sufficient for the challenge workload.
+The MVP requires no distributed cache. Indexed H2 lookup is sufficient for the challenge workload and one service instance.
 
 If traffic grows:
 
-1. Scale stateless application instances horizontally.
-2. Add database connection pooling and read monitoring.
-3. Cache active URL mappings, with explicit invalidation on deactivation.
-4. Move hit events to an asynchronous durable queue if exact synchronous counters become a bottleneck.
-5. Partition data by a stable hash of the short code only when a single database is no longer sufficient.
+1. Migrate from embedded H2 to a managed external relational database.
+2. Scale stateless application instances horizontally after the database migration.
+3. Add database connection pooling and read monitoring.
+4. Cache active URL mappings, with explicit invalidation on deactivation.
+5. Move hit events to an asynchronous durable queue if exact synchronous counters become a bottleneck.
+6. Partition data by a stable hash of the short code only when a single database is no longer sufficient.
 
 Caching and asynchronous counting add consistency trade-offs and are deliberately deferred.
 
@@ -289,12 +295,13 @@ Caching and asynchronous counting add consistency trade-offs and are deliberatel
 - Service tests for code generation, collision retry, ownership, and status transitions.
 - Repository tests for uniqueness and atomic concurrent hit increments.
 - Controller tests for all required HTTP statuses and response headers.
-- Integration tests using a real PostgreSQL-compatible environment where practical.
+- Integration tests using file-backed H2 in addition to fast in-memory tests.
 - Smoke test for startup and `/health`.
 
 ## 14. Known Limitations
 
 - No full user-account system.
+- The H2 deployment is limited to a single application instance and depends on persistent-volume availability and backups.
 - Public metadata reveals the original URL; protect the endpoint in a future private-link model.
 - A client may cache `301` and bypass later deactivation or hit counting.
 - No expiration, deletion, malicious-link scanning, advanced analytics, or multi-region guarantees.

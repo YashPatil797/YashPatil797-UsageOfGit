@@ -138,7 +138,7 @@ Each stored URL record must contain:
 - An owner identifier.
 - The configured redirect type.
 
-Persistence must survive application restarts in the deployed environment. A managed relational database is preferred for cloud deployment. An embedded database is acceptable for local development if its limitations are documented.
+Persistence must use a file-backed H2 database. The H2 data directory must be mounted on persistent storage in the deployed environment so records survive application restarts and redeployments. Hosting the database on ephemeral container storage does not satisfy this requirement.
 
 Short codes must:
 
