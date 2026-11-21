@@ -21,10 +21,10 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
   - Files: `src/main/resources/db/migration/V1__create_urls.sql`, `src/main/java/com/example/shortener/domain/ShortUrl.java`, `src/main/java/com/example/shortener/repository/ShortUrlRepository.java`, `PROGRESS.md`
   - Verify: `docker compose up --build -d && docker compose exec postgres psql -U shortener -c '\d urls' && docker compose logs app-1 | grep -i flyway`
 
-- [ ] **C2 — Automatic short-code generation**
-  - Covers: FR-1, NFR-1
-  - Files: `src/main/java/com/example/shortener/service/ShortCodeGenerator.java`, `src/test/java/com/example/shortener/service/ShortCodeGeneratorTest.java`
-  - Verify: `./mvnw -Dtest=ShortCodeGeneratorTest test`
+- [x] **C2 — Base62 encoder**
+  - Covers: NFR-4
+  - Files: `src/main/java/com/example/shortener/domain/Base62.java`, `src/test/java/com/example/shortener/domain/Base62Test.java`, `PROGRESS.md`
+  - Verify: `mvn -q test -Dtest=Base62Test`
 
 - [ ] **C3 — Create-short-URL endpoint**
   - Covers: FR-1, NFR-1
@@ -94,7 +94,7 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## NEXT
 
-C2 — Automatic short-code generation. Do not begin automatically.
+C3 — Create-short-URL endpoint. Do not begin automatically.
 
 ## Log
 
@@ -102,3 +102,4 @@ C2 — Automatic short-code generation. Do not begin automatically.
 - S1: Added the Spring Boot 3.3/Java 21 walking-skeleton entry point and YAML configuration for PostgreSQL, Redis, JPA validation, base URL, port, and detailed health reporting. Configured the Boot plugin to package `ShortenerApplication`. Legacy `UrlShortenerApplication.java` and `application.properties` remain untouched because they were outside this slice's allowed file list.
 - S2 revalidation: Confirmed the Dockerfile, two-instance Compose model, YAML syntax, and packaged JAR after S1. Docker and curl health checks remain pending because Docker is not installed on this VM.
 - C1: Replaced the earlier V1 schema with `url_id_seq` and `urls`, added the assigned-ID JPA entity, and added code lookup plus sequence access in the repository. Compilation passes; PostgreSQL/Flyway runtime verification is pending because Docker is not installed on this VM.
+- C2: Added dependency-free Base62 encoding and decoding with validation and overflow protection. Required boundary and round-trip tests pass with the Maven wrapper; system Maven is unavailable on this VM.
