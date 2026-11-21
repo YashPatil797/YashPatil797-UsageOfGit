@@ -100,3 +100,4 @@ C1 — Persistent URL domain and repository. Do not begin automatically.
 
 - S2: Added a non-root, memory-aware multi-stage image and a Compose stack with PostgreSQL 16, Redis 7, and two application instances on ports 8081/8082. The existing `V1__create_short_urls.sql` migration supplies the Flyway schema, so no empty baseline migration was needed.
 - S1: Added the Spring Boot 3.3/Java 21 walking-skeleton entry point and YAML configuration for PostgreSQL, Redis, JPA validation, base URL, port, and detailed health reporting. Configured the Boot plugin to package `ShortenerApplication`. Legacy `UrlShortenerApplication.java` and `application.properties` remain untouched because they were outside this slice's allowed file list.
+- S2 revalidation: Confirmed the Dockerfile, two-instance Compose model, YAML syntax, and packaged JAR after S1. Docker and curl health checks remain pending because Docker is not installed on this VM.
