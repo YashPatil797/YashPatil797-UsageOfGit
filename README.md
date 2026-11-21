@@ -39,13 +39,15 @@ Both stateless Spring Boot instances use the same PostgreSQL database and Redis 
 
 ## High-level design
 
-![High-level design: client, load balancer, two Spring Boot instances, Redis, PostgreSQL, and Flyway](docs/images/high-level-design.jpg)
+![High-level design: client, load balancer, two Spring Boot instances with controllers, UrlService, ManagementTokens, UrlCache, and ShortUrlRepository, plus Redis, PostgreSQL, and Flyway V1 and V2](docs/images/high-level-design.jpg)
 
-- **Create** (`POST /api/v1/urls`): `UrlController` calls `UrlService`, which validates the request with `UrlValidator`, takes the next `url_id_seq` value, encodes it with `Base62`, and inserts through `ShortUrlRepository`. A code that is already taken is skipped by the database (`ON CONFLICT DO NOTHING`), not by an exception.
-- **Redirect** (`GET /{code}`): `RedirectController` calls `UrlService`, which reads `UrlCache` (Redis) first and falls back to PostgreSQL on a miss or Redis failure. Each successful redirect increments `click_count` atomically in PostgreSQL.
-- **Errors**: `GlobalExceptionHandler` turns exceptions into consistent JSON errors (`400`, `404`, `409`, `410`, `500`).
+- **Create** (`POST /api/v1/urls`): `UrlController` calls `UrlService`, which validates the request with `UrlValidator`, takes the next `url_id_seq` value, encodes it with `Base62`, and inserts through `ShortUrlRepository`. A code that is already taken is skipped by the database (`ON CONFLICT DO NOTHING`), not by an exception. `ManagementTokens` generates the one-time owner token; only its SHA-256 hash is stored.
+- **Redirect** (`GET /{code}`): `RedirectController` calls `UrlService`, which reads `UrlCache` (Redis, `url:v2:<code>` keys) first and falls back to PostgreSQL on a miss or Redis failure. Each successful redirect increments `click_count` atomically in PostgreSQL, only for active, unexpired links, and returns `301` for permanent links or `302` otherwise.
+- **Metadata** (`GET /api/v1/urls/{code}`): `UrlService` reads PostgreSQL in a read-only transaction; it does not count a hit.
+- **Deactivate** (`PATCH /api/v1/urls/{code}`): `UrlService` checks the Bearer token with `ManagementTokens`, sets `active = false` in PostgreSQL, and evicts the Redis entry.
+- **Errors**: `GlobalExceptionHandler` turns exceptions into consistent JSON errors (`400`, `401`, `403`, `404`, `409`, `410`, `500`).
 - **Health** (`GET /health`): reports PostgreSQL only, because Redis is a fail-open cache.
-- **Schema**: Flyway applies `V1__create_urls.sql` at startup; Hibernate only validates it.
+- **Schema**: Flyway applies `V1__create_urls.sql` and `V2__add_link_management.sql` at startup; Hibernate only validates it.
 
 ## Key design decisions
 
