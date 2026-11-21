@@ -4,10 +4,10 @@ Each slice is scoped to 10–15 minutes and must leave the application runnable.
 
 ## Skeleton (S)
 
-- [x] **S1 — Project foundation**
-  - Covers: NFR-2, NFR-4
-  - Files: `pom.xml`, `Dockerfile`, `docker-compose.yml`, `src/main/resources/application.properties`, `src/main/resources/db/migration/V1__create_short_urls.sql`, `src/main/java/com/example/shortener/UrlShortenerApplication.java`
-  - Verify: `./mvnw test`
+- [x] **S1 — Spring Boot walking skeleton**
+  - Covers: FR-9
+  - Files: `pom.xml`, `src/main/java/com/example/shortener/ShortenerApplication.java`, `src/main/resources/application.yml`, `PROGRESS.md`
+  - Verify: `mvn -q compile`
 
 - [x] **S2 — Docker and two-instance Compose stack**
   - Covers: NFR-7, NFR-11
@@ -99,3 +99,4 @@ C1 — Persistent URL domain and repository. Do not begin automatically.
 ## Log
 
 - S2: Added a non-root, memory-aware multi-stage image and a Compose stack with PostgreSQL 16, Redis 7, and two application instances on ports 8081/8082. The existing `V1__create_short_urls.sql` migration supplies the Flyway schema, so no empty baseline migration was needed.
+- S1: Added the Spring Boot 3.3/Java 21 walking-skeleton entry point and YAML configuration for PostgreSQL, Redis, JPA validation, base URL, port, and detailed health reporting. Configured the Boot plugin to package `ShortenerApplication`. Legacy `UrlShortenerApplication.java` and `application.properties` remain untouched because they were outside this slice's allowed file list.
